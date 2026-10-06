@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Desafio Esportivo</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;font-family:Arial,sans-serif;min-height:100vh;
+  background:linear-gradient(135deg,#071b2d,#123d55,#071b2d);
+  color:#fff;display:flex;align-items:center;justify-content:center;padding:20px
+}
+.game{
+  width:min(900px,100%);background:#ffffff12;border:1px solid #ffffff25;
+  backdrop-filter:blur(10px);border-radius:24px;padding:28px;
+  box-shadow:0 20px 60px #0008
+}
+h1{text-align:center;margin:0 0 8px;font-size:42px}
+.subtitle{text-align:center;color:#cde5ef;margin-bottom:24px}
+.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.badge{background:#0005;padding:10px 16px;border-radius:14px;font-weight:bold}
+.question-box{background:#fff;color:#10202a;border-radius:20px;padding:25px}
+.category{font-size:14px;font-weight:bold;text-transform:uppercase;color:#1677a8}
+.question{font-size:26px;font-weight:bold;margin:12px 0 22px}
+.answers{display:grid;gap:12px}
+.answer{
+  border:0;border-radius:14px;padding:16px;text-align:left;font-size:17px;
+  cursor:pointer;background:#edf5f8;color:#10202a;transition:.2s
+}
+.answer:hover:not(:disabled){transform:translateY(-2px);background:#d8edf5}
+.answer.correct{background:#38c172;color:#fff}
+.answer.wrong{background:#e05252;color:#fff}
+.answer:disabled{cursor:default}
+.next{
+  margin-top:18px;width:100%;border:0;border-radius:14px;padding:15px;
+  font-size:17px;font-weight:bold;background:#ffb703;color:#14212a;cursor:pointer
+}
+.hidden{display:none}
+.start{text-align:center}
+.start button,.restart{
+  border:0;border-radius:15px;padding:15px 28px;font-size:18px;
+  font-weight:bold;cursor:pointer;background:#ffb703;color:#14212a
+}
+.mode-buttons{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:22px 0}
+.mode-buttons button{background:#fff;color:#10202a}
+.result{text-align:center;padding:25px}
+.score-big{font-size:60px;font-weight:900;margin:15px}
+.progress{height:9px;background:#0005;border-radius:10px;overflow:hidden;margin-bottom:18px}
+.progress div{height:100%;background:#ffb703;width:0;transition:.3s}
+.small{color:#cde5ef;text-align:center;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="game">
+  <div id="startScreen" class="start">
+    <h1>🏆 Desafio Esportivo</h1>
+    <p class="subtitle">Teste seus conhecimentos sobre futebol e basquete!</p>
+    <div class="mode-buttons">
+      <button onclick="startGame('todos')">⚽🏀 Os dois</button>
+      <button onclick="startGame('futebol')">⚽ Futebol</button>
+      <button onclick="startGame('basquete')">🏀 Basquete</button>
+    </div>
+    <p class="small">10 perguntas • +10 pontos por acerto • 3 vidas</p>
+  </div>
+
+  <div id="gameScreen" class="hidden">
+    <div class="top">
+      <div class="badge">⭐ Pontos: <span id="score">0</span></div>
+      <div class="badge">❤️ Vidas: <span id="lives">3</span></div>
+      <div class="badge">📋 <span id="number">1</span>/10</div>
+    </div>
+    <div class="progress"><div id="progress"></div></div>
+    <div class="question-box">
+      <div id="category" class="category"></div>
+      <div id="question" class="question"></div>
+      <div id="answers" class="answers"></div>
+      <button id="next" class="next hidden" onclick="nextQuestion()">Próxima pergunta ➜</button>
+    </div>
+  </div>
+
+  <div id="resultScreen" class="result hidden">
+    <h1 id="resultTitle"></h1>
+    <p>Seu resultado:</p>
+    <div class="score-big"><span id="finalScore">0</span> pontos</div>
+    <p id="resultText"></p>
+    <button class="restart" onclick="location.reload()">🔄 Jogar novamente</button>
+  </div>
+</div>
+
+<script>
+const questions = [
+ {cat:"⚽ Futebol",q:"Quantos jogadores cada time começa com uma partida de futebol em campo?",a:["9","10","11","12"],c:2},
+ {cat:"⚽ Futebol",q:"Qual seleção venceu a Copa do Mundo de 2022?",a:["Brasil","Argentina","França","Alemanha"],c:1},
+ {cat:"⚽ Futebol",q:"Quanto vale um gol no futebol?",a:["1 ponto","2 pontos","3 pontos","5 pontos"],c:0},
+ {cat:"⚽ Futebol",q:"Qual cartão normalmente significa expulsão?",a:["Azul","Verde","Amarelo","Vermelho"],c:3},
+ {cat:"⚽ Futebol",q:"Como é chamado o jogador que defende o gol?",a:["Atacante","Goleiro","Volante","Lateral"],c:1},
+ {cat:"🏀 Basquete",q:"Quantos jogadores de cada equipe ficam em quadra no basquete?",a:["4","5","6","7"],c:1},
+ {cat:"🏀 Basquete",q:"Quantos pontos vale uma cesta feita de fora da linha de três?",a:["1","2","3","4"],c:2},
+ {cat:"🏀 Basquete",q:"Qual jogador é responsável por proteger o aro e pegar muitos rebotes?",a:["Armador","Pivô","Goleiro","Lateral"],c:1},
+ {cat:"🏀 Basquete",q:"O que acontece quando um jogador dá passos sem driblar?",a:["Gol","Drible duplo","Andada","Escanteio"],c:2},
+ {cat:"🏀 Basquete",q:"Qual é o nome da liga profissional mais famosa dos Estados Unidos?",a:["NFL","MLB","NBA","NHL"],c:2},
+ {cat:"⚽ Futebol",q:"O que é um escanteio?",a:["Uma cobrança feita do canto do campo","Uma falta dentro da área","Um tipo de drible","Uma substituição"],c:0},
+ {cat:"🏀 Basquete",q:"Quantos pontos vale um lance livre?",a:["1","2","3","4"],c:0}
+];
+
+let current=[], index=0, score=0, lives=3, answered=false;
+
+function startGame(mode){
+  let pool = mode==="todos" ? questions : questions.filter(x=>x.cat.toLowerCase().includes(mode));
+  current = [...pool].sort(()=>Math.random()-0.5).slice(0,10);
+  index=0; score=0; lives=3;
+  document.getElementById("startScreen").classList.add("hidden");
+  document.getElementById("resultScreen").classList.add("hidden");
+  document.getElementById("gameScreen").classList.remove("hidden");
+  showQuestion();
+}
+
+function showQuestion(){
+  answered=false;
+  const item=current[index];
+  document.getElementById("score").textContent=score;
+  document.getElementById("lives").textContent=lives;
+  document.getElementById("number").textContent=index+1;
+  document.getElementById("progress").style.width=((index)/current.length*100)+"%";
+  document.getElementById("category").textContent=item.cat;
+  document.getElementById("question").textContent=item.q;
+  const box=document.getElementById("answers");
+  box.innerHTML="";
+  item.a.forEach((ans,i)=>{
+    const b=document.createElement("button");
+    b.className="answer";
+    b.textContent=String.fromCharCode(65+i)+") "+ans;
+    b.onclick=()=>answer(i,b);
+    box.appendChild(b);
+  });
+  document.getElementById("next").classList.add("hidden");
+}
+
+function answer(choice,button){
+  if(answered)return;
+  answered=true;
+  const item=current[index];
+  const buttons=document.querySelectorAll(".answer");
+  buttons.forEach((b,i)=>{
+    b.disabled=true;
+    if(i===item.c)b.classList.add("correct");
+  });
+  if(choice===item.c){
+    score+=10;
+    button.textContent+="  ✓";
+  }else{
+    lives--;
+    button.classList.add("wrong");
+    button.textContent+="  ✗";
+  }
+  document.getElementById("score").textContent=score;
+  document.getElementById("lives").textContent=lives;
+  document.getElementById("next").classList.remove("hidden");
+}
+
+function nextQuestion(){
+  if(!answered)return;
+  if(lives<=0 || index>=current.length-1){finishGame();return;}
+  index++;
+  showQuestion();
+}
+
+function finishGame(){
+  document.getElementById("gameScreen").classList.add("hidden");
+  document.getElementById("resultScreen").classList.remove("hidden");
+  document.getElementById("progress").style.width="100%";
+  document.getElementById("finalScore").textContent=score;
+  const title=document.getElementById("resultTitle");
+  const text=document.getElementById("resultText");
+  if(lives<=0){
+    title.textContent="💥 Fim de jogo!";
+    text.textContent="Você ficou sem vidas. Tente novamente e melhore sua pontuação!";
+  }else if(score===100){
+    title.textContent="🏆 CAMPEÃO!";
+    text.textContent="Você acertou tudo! Conhecimento esportivo de elite.";
+  }else if(score>=70){
+    title.textContent="🔥 Mandou muito bem!";
+    text.textContent="Você mostrou que entende bastante de esportes.";
+  }else{
+    title.textContent="👏 Boa partida!";
+    text.textContent="Continue jogando para aumentar sua pontuação.";
+  }
+}
+</script>
+</body>
+</html>
